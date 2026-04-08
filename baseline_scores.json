@@ -7,27 +7,27 @@
     {
       "task": "easy",
       "grader_score": 1.0,
-      "episode_return": 50.0,
+      "episode_return": 100.0,
       "steps": 1,
-      "rewards": [50.0],
+      "rewards": [100.0],
       "error": null
     },
     {
       "task": "medium",
       "grader_score": 1.0,
-      "episode_return": 50.0,
+      "episode_return": 100.0,
       "steps": 1,
-      "rewards": [50.0],
+      "rewards": [100.0],
       "error": null
     },
     {
       "task": "hard",
-      "grader_score": 0.85,
-      "episode_return": 42.5,
-      "steps": 1,
-      "rewards": [42.5],
+      "grader_score": 0.97,
+      "episode_return": 291.0,
+      "steps": 3,
+      "rewards": [97.0, 97.0, 97.0],
       "error": null
     }
   ],
-  "average_grader_score": 0.95
+  "average_grader_score": 0.99
 }
