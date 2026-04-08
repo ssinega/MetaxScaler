@@ -1,34 +1,45 @@
-"""OpenAI baseline runner for Cloud Cost Optimizer Environment."""
+"""
+Cloud Infrastructure Cost Optimizer - Final Inference Script
+Strictly follows the Meta x Scaler Hackathon STDOUT format and logic requirements.
+"""
 
-from __future__ import annotations
-
-import json
+import asyncio
 import os
-import time
-from typing import Optional
-
+import json
+import textwrap
+from typing import List, Optional
 from openai import OpenAI
-from env import Action, SupportEnv, TASKS, TICKETS, grade
 
+# Domain Imports
+from env import Action, SupportEnv, TASKS, ACCOUNTS, grade
+
+# Mandatory Environment Variables
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "meta-llama/Llama-3.1-8B-Instruct")
+HF_TOKEN = os.getenv("HF_TOKEN")
+BASELINE_MODE = os.getenv("BASELINE_MODE", "api").lower().strip()
+
+# Constants
 BENCHMARK = "cloud-cost-optimizer-env"
+MAX_STEPS = 10
+SUCCESS_SCORE_THRESHOLD = 0.3 # Normalized score threshold
 
-# Configuration
-API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1").strip()
-MODEL_NAME = os.getenv("MODEL_NAME", "meta-llama/Llama-3.1-8B-Instruct").strip()
-HF_TOKEN = os.getenv("HF_TOKEN", "").strip()
+# Max possible reward calculation for normalization
+# In our env, each correct action on a resource gives ~1.0 score.
+# Hard task has 3 resources. Easy/Medium have 1.
+MAX_TOTAL_REWARD = 3.0 
 
-def _emit_start(task: str, env: str, model: str) -> None:
+def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
-def _emit_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
-    done_str = str(done).lower()
-    err_str = error if error else "null"
-    print(f"[STEP] step={step} action={action} reward={reward:.2f} done={done_str} error={err_str}", flush=True)
+def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
+    error_val = error if error else "null"
+    done_val = str(done).lower()
+    print(f"[STEP] step={step} action={action} reward={reward:.2f} done={done_val} error={error_val}", flush=True)
 
-def _emit_end(success: bool, steps: int, score: float, rewards: list[float]) -> None:
-    success_str = str(success).lower()
+def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    print(f"[END] success={success_str} steps={steps} score={score:.2f} rewards={rewards_str}", flush=True)
+    print(f"[END] success={str(success).lower()} steps={steps} score={score:.2f} rewards={rewards_str}", flush=True)
 
 def parse_model_output(raw: str) -> Action:
     """Parse model output into a Cloud Action."""
@@ -47,73 +58,90 @@ def parse_model_output(raw: str) -> Action:
         resolve=fields.get("resolve", "false").lower() == "true",
     )
 
-def mock_model_output(expected: dict, task_id: str) -> str:
+def mock_oracle(task_id: str, step: int, env: SupportEnv) -> str:
     """Deterministic oracle for FinOps tasks."""
-    target = expected["target_optimizations"][0]
+    account = ACCOUNTS[TASKS[task_id].account_index]
+    targets = account.get("target_optimizations", [])
+    
+    # Filter for targets not yet optimized
+    remaining = [t for t in targets if t["resource_id"] not in env.optimized_resource_ids]
+    if not remaining:
+        return "action: ignore\nreasoning: All targets resolved.\nresolve: true"
+    
+    target = remaining[0]
     out = (
         f"resource_id: {target['resource_id']}\n"
         f"action: {target['action']}\n"
-        f"reasoning: Utilizing low CPU metrics to reduce over-provisioned cost.\n"
-        f"resolve: true"
+        f"reasoning: Utilization analysis confirms this resource is over-provisioned or misconfigured.\n"
+        f"resolve: {'true' if len(remaining) == 1 else 'false'}"
     )
     if "target_type" in target:
         out += f"\ntarget_type: {target['target_type']}"
     if "new_tags" in target:
-        out += f"\ncostcenter: {target['new_tags'].get('CostCenter')}"
+        out += f"\ncostcenter: {target['new_tags'].get('CostCenter', 'Engineering')}"
     return out
 
-def run_task(task_id: str, client: Optional[OpenAI], mode: str) -> dict:
-    task = TASKS[task_id]
-    account = TICKETS[task.account_index]
+async def run_episode(task_id: str, client: OpenAI) -> float:
     env = SupportEnv()
+    rewards: List[float] = []
+    steps_taken = 0
+    
+    log_start(task=task_id, env=BENCHMARK, model=MODEL_NAME)
+    
     obs = env.reset(task_id=task_id)
+    done = False
     
-    _emit_start(task=task_id, env=BENCHMARK, model=MODEL_NAME)
-    
-    if mode == "mock":
-        raw = mock_model_output(account, task_id)
-    else:
-        if client is None:
-            raise RuntimeError("API client required for non-mock mode.")
-        # Create a simple prompt
-        prompt = f"Optimize this cloud account: {obs.model_dump()}\nObjective: {task.objective}"
-        completion = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        raw = completion.choices[0].message.content or ""
+    for step in range(1, MAX_STEPS + 1):
+        if BASELINE_MODE == "mock":
+            raw = mock_oracle(task_id, step, env)
+        else:
+            prompt = f"Observation: {obs.model_dump()}\nObjective: {TASKS[task_id].objective}\nOutput format: resource_id: <val>\naction: <val>\nreasoning: <val>\nresolve: <true/false>"
+            completion = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            raw = completion.choices[0].message.content or ""
 
-    action = parse_model_output(raw)
-    obs, reward, done, info = env.step(action)
-    
-    action_str = f"{action.action}(resource={action.resource_id}"
-    if action.target_type:
-        action_str += f",target={action.target_type}"
-    action_str += f",resolve={str(action.resolve).lower()})"
-    
-    _emit_step(step=1, action=action_str, reward=reward.score, done=done, error=None)
-    
-    score = grade(task_id, action, account)
-    _emit_end(success=True, steps=1, score=score, rewards=[reward.score])
-    
-    return {"task": task_id, "score": score}
+        action = parse_model_output(raw)
+        obs, reward_obj, done, info = env.step(action)
+        
+        step_reward = reward_obj.score
+        rewards.append(step_reward)
+        steps_taken = step
+        
+        action_desc = f"{action.action}(id={action.resource_id})"
+        if action.target_type: action_desc += f"[target={action.target_type}]"
+        
+        log_step(step=step, action=action_desc, reward=step_reward, done=done, error=None)
+        
+        if done:
+            break
 
-def run_baseline():
-    """Run all tasks and write baseline artifact. Detects API keys to switch between API and Mock modes."""
-    api_key = (os.getenv("OPENAI_API_KEY") or os.getenv("HF_TOKEN") or "").strip()
+    total_score = sum(rewards) / (len(ACCOUNTS[TASKS[task_id].account_index]["target_optimizations"]))
+    total_score = min(max(total_score, 0.0), 1.0)
+    success = total_score >= SUCCESS_SCORE_THRESHOLD
     
-    # Auto-detection logic for mode
-    env_mode = os.getenv("BASELINE_MODE")
-    if env_mode:
-        mode = env_mode.lower().strip()
-    else:
-        mode = "api" if api_key else "mock"
+    log_end(success=success, steps=steps_taken, score=total_score, rewards=rewards)
+    return total_score
 
-    client = OpenAI(api_key=api_key, base_url=API_BASE_URL) if mode == "api" else None
+async def main():
+    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN or "sk-dummy")
     
-    results = [run_task(tid, client, mode) for tid in ["easy", "medium", "hard"]]
-    avg = sum(r["score"] for r in results) / 3
+    results = []
+    for tid in ["easy", "medium", "hard"]:
+        score = await run_episode(tid, client)
+        results.append(score)
+    
+    avg = sum(results) / len(results)
     print(f"\nFinal Average Score: {avg:.4f}")
+    
+    # Write to final required artifact
+    with open("baseline_scores.json", "w") as f:
+        json.dump({
+            "model": MODEL_NAME,
+            "benchmark": BENCHMARK,
+            "average_grader_score": avg
+        }, f, indent=2)
 
 if __name__ == "__main__":
-    run_baseline()
+    asyncio.run(main())
