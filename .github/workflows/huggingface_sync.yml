@@ -16,6 +16,18 @@ jobs:
 
       - name: Push to hub
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          # Try picking from secrets first, fallback to vars
+          HF_TOKEN: ${{ secrets.HF_TOKEN || vars.HF_TOKEN }}
+          # Try picking from vars first, fallback to hardcoded
+          HF_SPACE_REPO: ${{ vars.HF_SPACE_REPO || 'Sinegas23/Metaxscaler' }}
         run: |
-          git push --force https://Sinegas23:$HF_TOKEN@huggingface.co/spaces/Sinegas23/Metaxscaler main
+          if [ -z "$HF_TOKEN" ]; then
+            echo "Error: HF_TOKEN is missing. Please add it to your GitHub Secrets."
+            exit 1
+          fi
+          
+          # Clean up repo string just in case it's a full URL
+          REPO_NAME=$(echo "$HF_SPACE_REPO" | sed 's|https://huggingface.co/spaces/||g')
+          
+          echo "Syncing to Hugging Face Space: $REPO_NAME"
+          git push --force "https://Sinegas23:$HF_TOKEN@huggingface.co/spaces/$REPO_NAME" main
