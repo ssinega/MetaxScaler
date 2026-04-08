@@ -41,6 +41,8 @@ def step(req: StepRequest):
         "info": info
     }
 
+import uvicorn
+
 @app.get("/tasks")
 def list_tasks():
     return {
@@ -53,5 +55,12 @@ def list_tasks():
             for tid, t in TASKS.items()
         }
     }
+
+def main():
+    """Main entry point for automated deployment."""
+    uvicorn.run(app, host="0.0.0.0", port=7860)
+
+if __name__ == "__main__":
+    main()
 
 # End of file
