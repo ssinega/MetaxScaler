@@ -1,6 +1,6 @@
 name: cloud-cost-optimizer-env
-description: AI environment for optimizing cloud infrastructure costs (FinOps)
-version: "0.1.0"
+description: AI environment for optimizing cloud infrastructure costs (FinOps). Agents learn to resize, stop, and tag resources while maintaining performance SLAs.
+version: "1.0.0"
 python_version: "3.10"
 entry_point:
   module: env
@@ -11,13 +11,15 @@ tasks:
   - hard
 tasks_module: env.tasks
 graders_module: env.graders
-default_max_steps: 5
+default_max_steps: 10
+max_runtime_seconds: 1100
 metadata:
   domain: cloud-infrastructure
-  action_space: discrete
-  observation_type: structured
+  action_space: discrete_multi_field
+  observation_type: structured_json
   tags:
     - openenv
     - finops
     - cloud-optimization
-    - aws-azure-gcp
+    - management-sim
+    - enterprise-ai

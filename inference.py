@@ -86,7 +86,11 @@ def run_task(task_id: str, client: Optional[OpenAI], mode: str) -> dict:
     action = parse_model_output(raw)
     obs, reward, done, info = env.step(action)
     
-    action_str = f"{action.action}(resource={action.resource_id},resolve={str(action.resolve).lower()})"
+    action_str = f"{action.action}(resource={action.resource_id}"
+    if action.target_type:
+        action_str += f",target={action.target_type}"
+    action_str += f",resolve={str(action.resolve).lower()})"
+    
     _emit_step(step=1, action=action_str, reward=reward.score, done=done, error=None)
     
     score = grade(task_id, action, account)
