@@ -1,33 +1,5 @@
 {
   "model": "meta-llama/Llama-3.1-8B-Instruct",
   "benchmark": "cloud-cost-optimizer-env",
-  "mode": "mock",
-  "seed": 7,
-  "scores": [
-    {
-      "task": "easy",
-      "grader_score": 1.0,
-      "episode_return": 100.0,
-      "steps": 1,
-      "rewards": [100.0],
-      "error": null
-    },
-    {
-      "task": "medium",
-      "grader_score": 1.0,
-      "episode_return": 100.0,
-      "steps": 1,
-      "rewards": [100.0],
-      "error": null
-    },
-    {
-      "task": "hard",
-      "grader_score": 0.97,
-      "episode_return": 291.0,
-      "steps": 3,
-      "rewards": [97.0, 97.0, 97.0],
-      "error": null
-    }
-  ],
-  "average_grader_score": 0.99
+  "average_grader_score": 0.9700000000000001
 }

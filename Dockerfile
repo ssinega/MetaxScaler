@@ -9,6 +9,7 @@ COPY . .
 
 # Environment variables for the server
 ENV PORT=7860
+ENV PYTHONPATH="/app"
 EXPOSE 7860
 
 # Start from the server subdirectory

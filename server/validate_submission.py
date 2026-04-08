@@ -10,6 +10,11 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 try:
+    # Ensure project root is in sys.path to find env package and app
+    project_root = Path(__file__).resolve().parent.parent
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+
     from app import app
     from env import Action, SupportEnv, TASKS, ACCOUNTS, grade
 except ImportError as e:
@@ -133,7 +138,8 @@ def check_docker() -> None:
 
 
 def main() -> None:
-    project_root = Path(__file__).parent
+    # Set cwd to actual project root (not server directory)
+    project_root = Path(__file__).resolve().parent.parent
     os.chdir(project_root)
     print(f"[INFO] Validating from: {project_root}\n")
     
