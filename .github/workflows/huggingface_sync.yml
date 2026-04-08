@@ -18,4 +18,4 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git push --force https://ssinega:$HF_TOKEN@huggingface.co/spaces/ssinega/MetaxScaler main
+          git push --force https://Sinegas23:$HF_TOKEN@huggingface.co/spaces/Sinegas23/Metaxscaler main
