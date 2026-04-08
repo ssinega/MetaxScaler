@@ -1,0 +1,43 @@
+{
+  "model": "meta-llama/Llama-3.1-8B-Instruct",
+  "benchmark": "support-ticket-env",
+  "mode": "mock",
+  "seed": 7,
+  "scores": [
+    {
+      "task": "easy",
+      "ticket_id": "ticket_003",
+      "grader_score": 0.99,
+      "episode_return": 1.0,
+      "steps": 1,
+      "rewards": [
+        1.0
+      ],
+      "error": null
+    },
+    {
+      "task": "medium",
+      "ticket_id": "ticket_002",
+      "grader_score": 0.99,
+      "episode_return": 1.0,
+      "steps": 1,
+      "rewards": [
+        1.0
+      ],
+      "error": null
+    },
+    {
+      "task": "hard",
+      "ticket_id": "ticket_013",
+      "grader_score": 0.99,
+      "episode_return": 1.57,
+      "steps": 2,
+      "rewards": [
+        0.75,
+        0.82
+      ],
+      "error": null
+    }
+  ],
+  "average_grader_score": 0.99
+}
