@@ -1,45 +1,58 @@
-"""
-Pydantic models for the AI Support Ticket Environment.
-"""
-
 from __future__ import annotations
 
-from typing import Optional
-
+from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
+# ---------------------------------------------------------------------------
+# Observation: What the agent sees (Cloud Resources & Metrics)
+# ---------------------------------------------------------------------------
+
+class Resource(BaseModel):
+    resource_id: str = Field(..., description="Unique AWS/Azure resource identifier")
+    resource_type: str = Field(..., description="e.g., m5.large, db.t3.medium")
+    cpu_utilization: float = Field(..., description="Average CPU utilization % over 7 days")
+    memory_utilization: float = Field(..., description="Average Memory utilization % over 7 days")
+    monthly_cost: float = Field(..., description="Estimated cost per month in USD")
+    tags: dict[str, str] = Field(default_factory=dict, description="Resource tags (CostCenter, Owner, etc.)")
+    is_production: bool = Field(default=False, description="Whether this is a performance-critical resource")
 
 class Observation(BaseModel):
-    ticket_id: str = Field(..., description="Unique identifier for the support ticket")
-    user_query: str = Field(..., description="The user's message or question")
-    category: Optional[str] = Field(default=None, description="Ticket category (e.g. billing, technical)")
-    priority: Optional[str] = Field(default=None, description="Ticket priority (e.g. low, medium, high)")
-    conversation_history: list[str] = Field(
-        default_factory=list,
-        description="Ordered list of previous messages in the conversation",
-    )
-    available_categories: list[str] = Field(
-        default_factory=lambda: ["billing", "account", "technical"],
-        description="Valid category values for this task",
-    )
-    available_priorities: list[str] = Field(
-        default_factory=lambda: ["low", "medium", "high"],
-        description="Valid priority values for this task",
-    )
-    available_actions: list[str] = Field(
-        default_factory=lambda: ["refund", "escalate", "guide"],
-        description="Valid action values for this task",
-    )
+    account_id: str = Field(..., description="Virtual cloud account identifier")
+    resources: list[Resource] = Field(default_factory=list, description="List of cloud resources to optimize")
+    monthly_budget: float = Field(..., description="Monthly cost threshold in USD")
+    current_spend: float = Field(..., description="Total spend so far this month")
+    timestamp: str = Field(..., description="Observation timestamp")
 
+# ---------------------------------------------------------------------------
+# Action: What the agent does (Optimization Decisions)
+# ---------------------------------------------------------------------------
 
 class Action(BaseModel):
-    category: str = Field(..., description="Category assigned to the ticket")
-    priority: str = Field(..., description="Priority assigned to the ticket")
-    action: str = Field(..., description="Action to take: 'refund', 'escalate', or 'guide'")
-    response: str = Field(..., description="The agent's response to the user")
-    resolve: bool = Field(..., description="Whether this action resolves the ticket")
+    resource_id: str = Field(..., description="The ID of the resource to act upon")
+    action: Literal["resize", "stop", "terminate", "tag", "snapshot", "ignore"] = Field(
+        ..., 
+        description="Optimization action to take"
+    )
+    target_type: Optional[str] = Field(
+        None, 
+        description="Required for 'resize': e.g., 't3.micro'"
+    )
+    new_tags: Optional[dict[str, str]] = Field(
+        None, 
+        description="Required for 'tag': Key-value pairs to apply"
+    )
+    reasoning: str = Field(..., description="Brief justification for the action")
+    resolve: bool = Field(
+        default=False, 
+        description="Set to true when all optimization tasks for this session are complete"
+    )
 
+# ---------------------------------------------------------------------------
+# Reward: How the agent is scored
+# ---------------------------------------------------------------------------
 
 class Reward(BaseModel):
-    score: float = Field(..., description="Numeric reward signal for the agent's action")
-    reason: Optional[str] = Field(default=None, description="Human-readable explanation of the reward")
+    score: float = Field(default=0.0, description="Normalized score [0, 1]")
+    cost_reduction: float = Field(default=0.0, description="Actual monthly USD saved by this action")
+    penalty: float = Field(default=0.0, description="Deduction for performance risks or SLA breaches")
+    efficiency_ratio: float = Field(default=0.0, description="Cost saved relative to original spend")

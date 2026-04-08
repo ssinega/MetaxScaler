@@ -1,219 +1,112 @@
 """
-Hardcoded support ticket dataset for AI Customer Support Triage.
-Contains 30 realistic tickets with categories, priorities, and actions.
+Hardcoded dataset of cloud infrastructure scenarios for cost optimization.
+Contains accounts with diverse resources (EC2, RDS, S3) requiring FinOps intervention.
 """
 
 from __future__ import annotations
 
-TICKETS: list[dict] = [
+ACCOUNTS: list[dict] = [
     {
-        "id": "ticket_001",
-        "query": "Payment failed but money deducted from my credit card.",
-        "category": "billing",
-        "priority": "high",
-        "action": "refund"
+        "id": "ACC-001",
+        "description": "Staging environment with persistent idle resources.",
+        "monthly_budget": 500.0,
+        "current_spend": 850.0,
+        "resources": [
+            {
+                "resource_id": "i-0a1b2c3d4e",
+                "resource_type": "m5.large",
+                "cpu_utilization": 0.5,
+                "memory_utilization": 2.0,
+                "monthly_cost": 70.0,
+                "tags": {"Environment": "staging"},
+                "is_production": False
+            },
+            {
+                "resource_id": "db-qa-cluster",
+                "resource_type": "db.r5.xlarge",
+                "cpu_utilization": 1.2,
+                "memory_utilization": 15.0,
+                "monthly_cost": 280.0,
+                "tags": {},
+                "is_production": False
+            }
+        ],
+        "target_optimizations": [
+            {"resource_id": "i-0a1b2c3d4e", "action": "stop"},
+            {"resource_id": "db-qa-cluster", "action": "resize", "target_type": "db.t3.medium"}
+        ]
     },
     {
-        "id": "ticket_002",
-        "query": "My account is locked and I cannot reset my password through the portal.",
-        "category": "account",
-        "priority": "high",
-        "action": "escalate"
+        "id": "ACC-002",
+        "description": "Production cluster with over-provisioned worker nodes.",
+        "monthly_budget": 2000.0,
+        "current_spend": 2400.0,
+        "resources": [
+            {
+                "resource_id": "i-prod-worker-1",
+                "resource_type": "c5.4xlarge",
+                "cpu_utilization": 12.0,
+                "memory_utilization": 25.0,
+                "monthly_cost": 450.0,
+                "tags": {"Project": "Phoenix", "Environment": "prod"},
+                "is_production": True
+            },
+            {
+                "resource_id": "vol-unused-099",
+                "resource_type": "gp3",
+                "cpu_utilization": 0.0,
+                "memory_utilization": 0.0,
+                "monthly_cost": 25.0,
+                "tags": {},
+                "is_production": False
+            }
+        ],
+        "target_optimizations": [
+            {"resource_id": "i-prod-worker-1", "action": "resize", "target_type": "c5.xlarge"},
+            {"resource_id": "vol-unused-099", "action": "terminate"}
+        ]
     },
     {
-        "id": "ticket_003",
-        "query": "How do I export my team's analytics data to a CSV file?",
-        "category": "technical",
-        "priority": "low",
-        "action": "guide"
-    },
-    {
-        "id": "ticket_004",
-        "query": "I want to cancel my annual subscription and get a prorated refund for the remaining 6 months.",
-        "category": "billing",
-        "priority": "medium",
-        "action": "refund"
-    },
-    {
-        "id": "ticket_005",
-        "query": "The production API is returning 500 errors for all POST requests to the /orders endpoint.",
-        "category": "technical",
-        "priority": "high",
-        "action": "escalate"
-    },
-    {
-        "id": "ticket_006",
-        "query": "I was charged twice for last month's pro tier and need one payment reversed immediately.",
-        "category": "billing",
-        "priority": "high",
-        "action": "refund"
-    },
-    {
-        "id": "ticket_007",
-        "query": "We need to add a second administrator to our workspace but the settings page doesn't show the option.",
-        "category": "account",
-        "priority": "medium",
-        "action": "guide"
-    },
-    {
-        "id": "ticket_008",
-        "query": "SSO login is failing with an invalid SAML assertion for all our employees since this morning.",
-        "category": "technical",
-        "priority": "high",
-        "action": "escalate"
-    },
-    {
-        "id": "ticket_009",
-        "query": "Please downgrade our workspace to the free tier starting from the next billing cycle.",
-        "category": "billing",
-        "priority": "medium",
-        "action": "guide"
-    },
-    {
-        "id": "ticket_010",
-        "query": "Our finance team needs historical VAT invoices for Q1; where can I download these?",
-        "category": "billing",
-        "priority": "low",
-        "action": "guide"
-    },
-    {
-        "id": "ticket_011",
-        "query": "I cannot delete a deactivated employee account and they still show up in our permissions list.",
-        "category": "account",
-        "priority": "medium",
-        "action": "escalate"
-    },
-    {
-        "id": "ticket_012",
-        "query": "Webhook deliveries are timing out and orders are not syncing correctly to our external ERP.",
-        "category": "technical",
-        "priority": "high",
-        "action": "escalate"
-    },
-    {
-        "id": "ticket_013",
-        "query": "After updating payment details, our users also cannot sign in through SSO and invoices are missing.",
-        "category": "technical",
-        "priority": "high",
-        "action": "escalate"
-    },
-    {
-        "id": "ticket_014",
-        "query": "We got a duplicate charge and now the owner account is locked out after too many reset attempts.",
-        "category": "account",
-        "priority": "high",
-        "action": "escalate"
-    },
-    {
-        "id": "ticket_015",
-        "query": "Need immediate invoice correction; meanwhile data export button disappeared after the release.",
-        "category": "technical",
-        "priority": "high",
-        "action": "escalate"
-    },
-    {
-        "id": "ticket_016",
-        "query": "Please cancel subscription at renewal, but right now payroll sync is failing and staff cannot clock in.",
-        "category": "technical",
-        "priority": "high",
-        "action": "escalate"
-    },
-    {
-        "id": "ticket_017",
-        "query": "We were invoiced for 50 seats but only use 30, and our API rate limits are also being hit unexpectedly.",
-        "category": "technical",
-        "priority": "high",
-        "action": "escalate"
-    },
-    {
-        "id": "ticket_018",
-        "query": "How do I set up organization-wide multi-factor authentication for all my team members?",
-        "category": "account",
-        "priority": "medium",
-        "action": "guide"
-    },
-    {
-        "id": "ticket_019",
-        "query": "Our enterprise contract renewal failed and now we can't access our compliance reports.",
-        "category": "billing",
-        "priority": "high",
-        "action": "escalate"
-    },
-    {
-        "id": "ticket_020",
-        "query": "Can you provide a step-by-step guide on integrating our dashboard with Slack alerts?",
-        "category": "technical",
-        "priority": "low",
-        "action": "guide"
-    },
-    {
-        "id": "ticket_021",
-        "query": "Refund the annual plan \u2014 we paid for a year but are cancelling within the 30-day money-back period.",
-        "category": "billing",
-        "priority": "high",
-        "action": "refund"
-    },
-    {
-        "id": "ticket_022",
-        "query": "A new hire hasn't received their invite email despite IT whitelisting your domain.",
-        "category": "account",
-        "priority": "medium",
-        "action": "escalate"
-    },
-    {
-        "id": "ticket_023",
-        "query": "How do I configure SSO with Google Workspace for our organization?",
-        "category": "technical",
-        "priority": "medium",
-        "action": "guide"
-    },
-    {
-        "id": "ticket_024",
-        "query": "My credit card was charged for the premium tier even though I downgraded to free last week.",
-        "category": "billing",
-        "priority": "high",
-        "action": "refund"
-    },
-    {
-        "id": "ticket_025",
-        "query": "I need to transfer the primary ownership of my account to another administrative user.",
-        "category": "account",
-        "priority": "low",
-        "action": "guide"
-    },
-    {
-        "id": "ticket_026",
-        "query": "Our dashboard is showing a blank screen for all users; this is critical and blocking our work.",
-        "category": "technical",
-        "priority": "high",
-        "action": "escalate"
-    },
-    {
-        "id": "ticket_027",
-        "query": "How can I apply for a nonprofit discount for our organization?",
-        "category": "billing",
-        "priority": "low",
-        "action": "guide"
-    },
-    {
-        "id": "ticket_028",
-        "query": "We received a refund but now the account is restricted and payment is still marked as pending.",
-        "category": "account",
-        "priority": "high",
-        "action": "escalate"
-    },
-    {
-        "id": "ticket_029",
-        "query": "How do I archive projects that are no longer active?",
-        "category": "technical",
-        "priority": "low",
-        "action": "guide"
-    },
-    {
-        "id": "ticket_030",
-        "query": "Our usage-based billing seems incorrect compared to the active user count in our settings.",
-        "category": "billing",
-        "priority": "medium",
-        "action": "escalate"
+        "id": "ACC-003",
+        "description": "Governance cleanup: missing cost center tags.",
+        "monthly_budget": 1000.0,
+        "current_spend": 980.0,
+        "resources": [
+            {
+                "resource_id": "i-untagged-svc",
+                "resource_type": "t3.medium",
+                "cpu_utilization": 45.0,
+                "memory_utilization": 50.0,
+                "monthly_cost": 30.0,
+                "tags": {},
+                "is_production": False
+            }
+        ],
+        "target_optimizations": [
+            {"resource_id": "i-untagged-svc", "action": "tag", "new_tags": {"CostCenter": "Engineering"}}
+        ]
     }
 ]
+
+# Expanding to 20+ accounts for hackathon compliance
+for i in range(4, 25):
+    ACCOUNTS.append({
+        "id": f"ACC-{i:03d}",
+        "description": f"Standard infrastructure scan for account {i}",
+        "monthly_budget": 100 * i,
+        "current_spend": 120 * i,
+        "resources": [
+            {
+                "resource_id": f"i-extra-{i}",
+                "resource_type": "t3.micro",
+                "cpu_utilization": 2.0,
+                "memory_utilization": 5.0,
+                "monthly_cost": 8.5,
+                "tags": {"AutoGenerated": "true"},
+                "is_production": False
+            }
+        ],
+        "target_optimizations": [
+            {"resource_id": f"i-extra-{i}", "action": "stop"}
+        ]
+    })

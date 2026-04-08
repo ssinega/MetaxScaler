@@ -1,84 +1,50 @@
-# Support Ticket OpenEnv
+# Cloud Infrastructure Cost Optimizer OpenEnv
 
-AI environment for the Meta x Scaler Hackathon simulating an enterprise customer support ticket resolution flow.
+An AI-powered environment for autonomous cloud cost management (FinOps). The agent monitors compute resource utilization and executes optimization strategies to reduce monthly bills while maintaining SLA compliance.
 
 ## 📖 Environment Overview
 
-This environment mimics a B2B SaaS support helpdesk. An RL agent acts as a triage specialist that must read incoming tickets, categorize them, set priorities, and either guide the user or escalate critical issues.
+Enterprises lose billions annually to over-provisioned cloud resources. This environment simulates a cloud dashboard where an RL agent acts as a FinOps engineer.
 
-- **Real-world utility**: Addresses the enterprise pain point of ticket mis-triage and SLA breaches.
-- **Novel mechanics**: Includes compound ticket detection where multiple issues must be identified to trigger an escalation score.
+- **Real-world utility**: Directly addresses the "Wasteful Cloud Spend" pain point.
+- **Novel mechanics**: Dynamic resizing and governance-first tagging tasks.
 
 ## 🛠️ Action Space
 
-The model must produce a JSON-compatible structured action:
-
 | Field | Type | Description |
 |---|---|---|
-| `category` | `string` | One of: `billing`, `account`, `technical` |
-| `priority` | `string` | One of: `low`, `medium`, `high` |
-| `action` | `string` | One of: `refund`, `escalate`, `guide` |
-| `response` | `string` | Empathetic natural language response |
-| `resolve` | `boolean` | Set to `true` to close the ticket |
+| `resource_id` | `string` | The target AWS/Azure resource ID |
+| `action` | `string` | `resize`, `stop`, `terminate`, `tag`, `snapshot`, `ignore` |
+| `target_type` | `string` | Required for `resize` (e.g., `t3.micro`) |
+| `new_tags` | `dict` | Key-value pairs for governance tagging |
+| `reasoning` | `string`| Justification for the change |
 
 ## 👁️ Observation Space
 
-The agent receives the following structured observation:
-
-- `ticket_id`: Unique identifier for the current ticket.
-- `user_query`: The customer's message.
-- `conversation_history`: List of prior interactions in the episode.
-- `available_categories`: List of valid categories.
-- `available_priorities`: List of valid priorities.
-- `available_actions`: List of valid resolution actions.
+The agent monitors a dashboard of `Resources`:
+- `resource_id`: Unique ID.
+- `cpu_utilization`: Avg utilization %.
+- `monthly_cost`: USD run rate.
+- `tags`: Current cost centers.
 
 ## 🎯 Tasks
 
-| Task | Difficulty | Objective |
+| Task | Difficulty | Goal |
 |---|---|---|
-| `easy` | Easy | Correctly identify the ticket category. |
-| `medium` | Medium | Identify both the category and the priority level. |
-| `hard` | Hard | Full resolution: category, priority, action, and keyword-rich response. |
+| `easy` | Easy | Fix missing 'CostCenter' tags on untagged resources. |
+| `medium` | Medium | Identify and shutdown compute nodes with <5% IDLE CPU. |
+| `hard` | Hard | Downsize production nodes to minimal viable instance types. |
 
 ## 💰 Reward Function
 
-The reward is a combination of:
-1. **Progress Bonus**: Given for each step that brings the state closer to resolution.
-2. **Success Score**: Grader score (0.0 to 1.0) on resolution.
-3. **Step Cost**: Small penalty (-0.01) per step to encourage efficiency.
-4. **Stagnation Penalty**: Penalty if the agent repeats actions or fails to progress.
-5. **Premature Resolve Penalty**: Heavy penalty if `resolve=true` is set before proper triage (especially in hard mode).
+The reward balances savings vs stability:
+- **Cost Saved**: Direct positive reward for reducing monthly USD.
+- **SLA Penalty**: Deduction if a resource is resized so small it exceeds 80% CPU utilization.
+- **Efficiency Ratio**: Normalized score for how well the agent optimized the specific account.
 
 ## 🚀 Setup & Execution
 
 ### Local Development
 1. Install dependencies: `pip install -r requirements.txt`
-2. Run smoke test: `python main.py`
-3. Run inference: `BASELINE_MODE=mock python inference.py`
-
-### Docker Execution
-```bash
-docker build -t support-ticket-env .
-docker run -p 7860:7860 support-ticket-env
-```
-
-## 📊 Baseline Scores
-
-Scores from `BASELINE_MODE=mock` (oracle runner):
-
-| Task   | Grader Score | Episode Return | Steps |
-|--------|-------------:|---------------:|------:|
-| easy   |       0.99   |         0.99   |     1 |
-| medium |       0.99   |         0.95   |     1 |
-| hard   |       0.79   |         1.12   |     2 |
-| **Avg**| **0.9233**   | — | — |
-
-## 🤖 Running Inference
-
-To run against a live model:
-```bash
-export API_BASE_URL="https://router.huggingface.co/v1"
-export MODEL_NAME="meta-llama/Llama-3.1-8B-Instruct"
-export HF_TOKEN="your_token_here"
-python inference.py
-```
+2. Run server: `python main.py`
+3. Run mock baseline: `BASELINE_MODE=mock python inference.py`

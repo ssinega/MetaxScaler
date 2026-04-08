@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  cloud-optimizer:
+    build: .
+    ports:
+      - "7860:7860"
+    environment:
+      - API_BASE_URL=https://router.huggingface.co/v1
+      - MODEL_NAME=meta-llama/Llama-3.1-8B-Instruct
+      - HF_TOKEN=${HF_TOKEN:-}
+    restart: unless-stopped
+
+  inference-test:
+    build: .
+    depends_on:
+      - cloud-optimizer
+    environment:
+      - BASELINE_MODE=mock
+      - API_BASE_URL=http://cloud-optimizer:7860
+    command: ["python", "inference.py"]
