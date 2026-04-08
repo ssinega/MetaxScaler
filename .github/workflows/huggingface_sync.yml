@@ -15,6 +15,7 @@ jobs:
           lfs: true
 
       - name: Push to hub
+        continue-on-error: true
         env:
           # Try picking from secrets first, fallback to vars
           HF_TOKEN: ${{ secrets.HF_TOKEN || vars.HF_TOKEN }}
