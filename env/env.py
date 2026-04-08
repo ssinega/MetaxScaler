@@ -106,5 +106,10 @@ class SupportEnv:
             "progress": f"{len(self.optimized_resource_ids)}/{len(targets)} resources optimized"
         }
 
+    def render(self):
+        """Standard OpenEnv render method."""
+        print(f"Cloud Stats: {len(self.optimized_resource_ids)} optimized.")
+
     def close(self):
+        """Cleanup logic."""
         pass

@@ -18,9 +18,9 @@ class ResetRequest(BaseModel):
 class StepRequest(BaseModel):
     action: Action
 
-@app.get("/")
-def root():
-    return {"name": "cloud-optimizer-env", "status": "active"}
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
 
 @app.post("/reset")
 def reset(req: ResetRequest = Body(default=ResetRequest())):
