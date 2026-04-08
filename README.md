@@ -1,3 +1,13 @@
+---
+title: Metaxscaler
+emoji: ☁️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Cloud Infrastructure Cost Optimizer OpenEnv
 
 An AI-powered environment for autonomous cloud cost management (FinOps). The agent monitors compute resource utilization and executes optimization strategies to reduce monthly bills while maintaining SLA compliance.
