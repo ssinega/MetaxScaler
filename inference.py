@@ -73,8 +73,15 @@ def run_task(task_id: str, client: Optional[OpenAI], mode: str) -> dict:
     if mode == "mock":
         raw = mock_model_output(account, task_id)
     else:
-        # LLM Logic (Stubbed for demo)
-        raw = "action: ignore\nreasoning: automated skip"
+        if client is None:
+            raise RuntimeError("API client required for non-mock mode.")
+        # Create a simple prompt
+        prompt = f"Optimize this cloud account: {obs.model_dump()}\nObjective: {task.objective}"
+        completion = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        raw = completion.choices[0].message.content or ""
 
     action = parse_model_output(raw)
     obs, reward, done, info = env.step(action)
@@ -88,8 +95,19 @@ def run_task(task_id: str, client: Optional[OpenAI], mode: str) -> dict:
     return {"task": task_id, "score": score}
 
 def run_baseline():
-    mode = os.getenv("BASELINE_MODE", "mock").lower()
-    results = [run_task(tid, None, mode) for tid in ["easy", "medium", "hard"]]
+    """Run all tasks and write baseline artifact. Detects API keys to switch between API and Mock modes."""
+    api_key = (os.getenv("OPENAI_API_KEY") or os.getenv("HF_TOKEN") or "").strip()
+    
+    # Auto-detection logic for mode
+    env_mode = os.getenv("BASELINE_MODE")
+    if env_mode:
+        mode = env_mode.lower().strip()
+    else:
+        mode = "api" if api_key else "mock"
+
+    client = OpenAI(api_key=api_key, base_url=API_BASE_URL) if mode == "api" else None
+    
+    results = [run_task(tid, client, mode) for tid in ["easy", "medium", "hard"]]
     avg = sum(r["score"] for r in results) / 3
     print(f"\nFinal Average Score: {avg:.4f}")
 
