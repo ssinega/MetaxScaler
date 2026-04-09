@@ -1,5 +1,10 @@
 {
-  "model": "meta-llama/Llama-3.1-8B-Instruct",
+  "model": "gpt-4o-mini",
   "benchmark": "cloud-cost-optimizer-env",
-  "average_grader_score": 0.01
+  "task_scores": {
+    "easy": 0.99,
+    "medium": 0.99,
+    "hard": 0.91
+  },
+  "average_grader_score": 0.9633
 }

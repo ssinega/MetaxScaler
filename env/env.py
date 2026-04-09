@@ -8,6 +8,19 @@ from .tasks import TASKS
 from .dataset import ACCOUNTS
 from .graders import grade
 
+
+def _strict_unit_score(value: float, default: float = 0.01) -> float:
+    """Normalize any numeric score to the open interval (0, 1)."""
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        score = default
+
+    if score != score:
+        score = default
+
+    return max(0.01, min(0.99, round(score, 2)))
+
 class SupportEnv:
     """
     Cloud Infrastructure Cost Optimizer Environment.
@@ -84,14 +97,16 @@ class SupportEnv:
             reward_score = action_quality
             cost_saved = action_quality * 100.0 # Mocked savings impact
         elif is_duplicate:
-            reward_score = -0.1 # Penalty for repeating actions
+            reward_score = 0.01 # Keep in strict open interval for evaluator compatibility
         else:
-            reward_score = 0.0 # Wrong action
+            reward_score = 0.01 # Keep in strict open interval for evaluator compatibility
+
+        reward_score = _strict_unit_score(reward_score)
 
         reward = Reward(
             score=reward_score,
             cost_reduction=cost_saved,
-            entropy_bonus=0.01 if not is_duplicate else 0.0
+            efficiency_ratio=0.01 if not is_duplicate else 0.0
         )
 
         # 4. Termination Logic

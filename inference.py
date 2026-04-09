@@ -29,6 +29,19 @@ SUCCESS_SCORE_THRESHOLD = 0.3 # Normalized score threshold
 # Hard task has 3 resources. Easy/Medium have 1.
 MAX_TOTAL_REWARD = 3.0 
 
+
+def strict_unit_score(value: float, default: float = 0.01) -> float:
+    """Return a finite score strictly inside (0, 1)."""
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        score = default
+
+    if score != score:
+        score = default
+
+    return max(0.01, min(0.99, round(score, 4)))
+
 def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
@@ -147,7 +160,7 @@ async def run_episode(task_id: str, client: OpenAI) -> float:
     try:
         targets = ACCOUNTS[TASKS[task_id].account_index].get("target_optimizations", [])
         total_score = sum(rewards) / len(targets) if targets else 0.01
-        total_score = min(max(total_score, 0.01), 0.99)
+        total_score = strict_unit_score(total_score)
     except Exception as e:
         total_score = 0.01
         
@@ -161,15 +174,19 @@ async def main():
         client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN or "sk-dummy")
         
         results = []
+        task_scores: dict[str, float] = {}
         for tid in ["easy", "medium", "hard"]:
             try:
                 score = await run_episode(tid, client)
-                results.append(score)
+                normalized = strict_unit_score(score)
+                results.append(normalized)
+                task_scores[tid] = normalized
             except Exception as e:
                 print(f"[FATAL] run_episode failed for {tid}: {e}")
                 results.append(0.01)
+                task_scores[tid] = 0.01
         
-        avg = sum(results) / len(results) if results else 0.01
+        avg = strict_unit_score(sum(results) / len(results) if results else 0.01)
         print(f"\nFinal Average Score: {avg:.4f}")
         
         # Write to final required artifact
@@ -177,6 +194,7 @@ async def main():
             json.dump({
                 "model": MODEL_NAME,
                 "benchmark": BENCHMARK,
+                "task_scores": task_scores,
                 "average_grader_score": avg
             }, f, indent=2)
     except Exception as e:

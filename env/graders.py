@@ -3,6 +3,19 @@ from __future__ import annotations
 import difflib
 from .models import Action
 
+
+def _strict_unit_score(value: float, default: float = 0.01) -> float:
+    """Return a finite score guaranteed to be in the open interval (0, 1)."""
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        score = default
+
+    if score != score:  # NaN check without importing math
+        score = default
+
+    return max(0.01, min(0.99, round(score, 2)))
+
 def grade(task_id: str, action: Action, expected_account: dict) -> float:
     """
     Grades a cloud optimization action based on cost saved and SLA safety.
@@ -58,4 +71,4 @@ def grade(task_id: str, action: Action, expected_account: dict) -> float:
         param_score += min(0.2, (matches / len(keywords)) * 0.4)
         
     final_score = strategy_score + param_score
-    return max(0.01, min(0.99, round(final_score, 2)))
+    return _strict_unit_score(final_score)
