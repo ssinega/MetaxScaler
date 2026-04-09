@@ -95,14 +95,22 @@ async def run_episode(task_id: str, client: OpenAI) -> float:
         if BASELINE_MODE == "mock":
             raw = mock_oracle(task_id, step, env)
         else:
-            prompt = f"Observation: {obs.model_dump()}\nObjective: {TASKS[task_id].objective}\nOutput format: resource_id: <val>\naction: <val>\nreasoning: <val>\nresolve: <true/false>"
-            completion = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=[{"role": "user", "content": prompt}]
-            )
-            raw = completion.choices[0].message.content or ""
+            try:
+                prompt = f"Observation: {obs.model_dump()}\nObjective: {TASKS[task_id].objective}\nOutput format: resource_id: <val>\naction: <val>\nreasoning: <val>\nresolve: <true/false>"
+                completion = client.chat.completions.create(
+                    model=MODEL_NAME,
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                raw = completion.choices[0].message.content or ""
+            except Exception as e:
+                log_step(step=step, action="error", reward=0.0, done=True, error=f"API error: {str(e)}")
+                break
 
-        action = parse_model_output(raw)
+        try:
+            action = parse_model_output(raw)
+        except Exception as e:
+            log_step(step=step, action="error", reward=0.0, done=True, error=f"Parse error: {str(e)}")
+            break
         obs, reward_obj, done, info = env.step(action)
         
         step_reward = reward_obj.score
