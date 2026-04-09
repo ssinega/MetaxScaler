@@ -86,7 +86,7 @@ async def run_episode(task_id: str, client: OpenAI) -> float:
         env = SupportEnv()
     except Exception as e:
         print(f"[FATAL] Failed to initialize env: {e}")
-        return 0.0
+        return 0.01
 
     rewards: List[float] = []
     steps_taken = 0
@@ -96,8 +96,8 @@ async def run_episode(task_id: str, client: OpenAI) -> float:
         obs = env.reset(task_id=task_id)
     except Exception as e:
         log_step(step=0, action="error", reward=0.0, done=True, error=f"Reset error: {str(e)}")
-        log_end(success=False, steps=0, score=0.0, rewards=[])
-        return 0.0
+        log_end(success=False, steps=0, score=0.01, rewards=[])
+        return 0.01
         
     done = False
     
@@ -146,10 +146,10 @@ async def run_episode(task_id: str, client: OpenAI) -> float:
 
     try:
         targets = ACCOUNTS[TASKS[task_id].account_index].get("target_optimizations", [])
-        total_score = sum(rewards) / len(targets) if targets else 0.0
-        total_score = min(max(total_score, 0.0), 1.0)
+        total_score = sum(rewards) / len(targets) if targets else 0.01
+        total_score = min(max(total_score, 0.01), 0.99)
     except Exception as e:
-        total_score = 0.0
+        total_score = 0.01
         
     success = total_score >= SUCCESS_SCORE_THRESHOLD
     
@@ -167,9 +167,9 @@ async def main():
                 results.append(score)
             except Exception as e:
                 print(f"[FATAL] run_episode failed for {tid}: {e}")
-                results.append(0.0)
+                results.append(0.01)
         
-        avg = sum(results) / len(results) if results else 0.0
+        avg = sum(results) / len(results) if results else 0.01
         print(f"\nFinal Average Score: {avg:.4f}")
         
         # Write to final required artifact

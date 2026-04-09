@@ -18,10 +18,10 @@ def grade(task_id: str, action: Action, expected_account: dict) -> float:
     affected_resource = next((r for r in expected_account["resources"] if r["resource_id"] == action.resource_id), None)
     if affected_resource and affected_resource.get("is_production") and action.action in ["stop", "terminate"]:
         if not target or target["action"] not in ["stop", "terminate"]:
-            return -1.0 # Immediate negative signal for destructive production behavior
+            return 0.01 # Immediate negative signal for destructive production behavior
 
     if not target:
-        return 0.0 # Acted on wrong resource or irrelevant action
+        return 0.05 # Acted on wrong resource or irrelevant action
 
     # 2. Strategy Alignment
     # Determine how close the action is to the recommended strategy
@@ -58,4 +58,4 @@ def grade(task_id: str, action: Action, expected_account: dict) -> float:
         param_score += min(0.2, (matches / len(keywords)) * 0.4)
         
     final_score = strategy_score + param_score
-    return round(min(1.0, final_score), 2)
+    return max(0.01, min(0.99, round(final_score, 2)))

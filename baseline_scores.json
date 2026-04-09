@@ -1,5 +1,5 @@
 {
   "model": "meta-llama/Llama-3.1-8B-Instruct",
   "benchmark": "cloud-cost-optimizer-env",
-  "average_grader_score": 0.9700000000000001
+  "average_grader_score": 0.01
 }
