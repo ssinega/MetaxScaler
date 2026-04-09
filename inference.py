@@ -82,18 +82,32 @@ def mock_oracle(task_id: str, step: int, env: SupportEnv) -> str:
     return out
 
 async def run_episode(task_id: str, client: OpenAI) -> float:
-    env = SupportEnv()
+    try:
+        env = SupportEnv()
+    except Exception as e:
+        print(f"[FATAL] Failed to initialize env: {e}")
+        return 0.0
+
     rewards: List[float] = []
     steps_taken = 0
-    
     log_start(task=task_id, env=BENCHMARK, model=MODEL_NAME)
     
-    obs = env.reset(task_id=task_id)
+    try:
+        obs = env.reset(task_id=task_id)
+    except Exception as e:
+        log_step(step=0, action="error", reward=0.0, done=True, error=f"Reset error: {str(e)}")
+        log_end(success=False, steps=0, score=0.0, rewards=[])
+        return 0.0
+        
     done = False
     
     for step in range(1, MAX_STEPS + 1):
         if BASELINE_MODE == "mock":
-            raw = mock_oracle(task_id, step, env)
+            try:
+                raw = mock_oracle(task_id, step, env)
+            except Exception as e:
+                log_step(step=step, action="error", reward=0.0, done=True, error=f"Mock error: {str(e)}")
+                break
         else:
             try:
                 prompt = f"Observation: {obs.model_dump()}\nObjective: {TASKS[task_id].objective}\nOutput format: resource_id: <val>\naction: <val>\nreasoning: <val>\nresolve: <true/false>"
@@ -111,8 +125,13 @@ async def run_episode(task_id: str, client: OpenAI) -> float:
         except Exception as e:
             log_step(step=step, action="error", reward=0.0, done=True, error=f"Parse error: {str(e)}")
             break
-        obs, reward_obj, done, info = env.step(action)
-        
+            
+        try:
+            obs, reward_obj, done, info = env.step(action)
+        except Exception as e:
+            log_step(step=step, action="error", reward=0.0, done=True, error=f"Env step error: {str(e)}")
+            break
+            
         step_reward = reward_obj.score
         rewards.append(step_reward)
         steps_taken = step
@@ -125,31 +144,46 @@ async def run_episode(task_id: str, client: OpenAI) -> float:
         if done:
             break
 
-    total_score = sum(rewards) / (len(ACCOUNTS[TASKS[task_id].account_index]["target_optimizations"]))
-    total_score = min(max(total_score, 0.0), 1.0)
+    try:
+        targets = ACCOUNTS[TASKS[task_id].account_index].get("target_optimizations", [])
+        total_score = sum(rewards) / len(targets) if targets else 0.0
+        total_score = min(max(total_score, 0.0), 1.0)
+    except Exception as e:
+        total_score = 0.0
+        
     success = total_score >= SUCCESS_SCORE_THRESHOLD
     
     log_end(success=success, steps=steps_taken, score=total_score, rewards=rewards)
     return total_score
 
 async def main():
-    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN or "sk-dummy")
-    
-    results = []
-    for tid in ["easy", "medium", "hard"]:
-        score = await run_episode(tid, client)
-        results.append(score)
-    
-    avg = sum(results) / len(results)
-    print(f"\nFinal Average Score: {avg:.4f}")
-    
-    # Write to final required artifact
-    with open("baseline_scores.json", "w") as f:
-        json.dump({
-            "model": MODEL_NAME,
-            "benchmark": BENCHMARK,
-            "average_grader_score": avg
-        }, f, indent=2)
+    try:
+        client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN or "sk-dummy")
+        
+        results = []
+        for tid in ["easy", "medium", "hard"]:
+            try:
+                score = await run_episode(tid, client)
+                results.append(score)
+            except Exception as e:
+                print(f"[FATAL] run_episode failed for {tid}: {e}")
+                results.append(0.0)
+        
+        avg = sum(results) / len(results) if results else 0.0
+        print(f"\nFinal Average Score: {avg:.4f}")
+        
+        # Write to final required artifact
+        with open("baseline_scores.json", "w") as f:
+            json.dump({
+                "model": MODEL_NAME,
+                "benchmark": BENCHMARK,
+                "average_grader_score": avg
+            }, f, indent=2)
+    except Exception as e:
+        print(f"[FATAL] main execution failed: {e}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        print(f"[FATAL] asyncio.run failed: {e}")
